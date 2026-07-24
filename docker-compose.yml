@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cunda-menu-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: cunda_menu
+      POSTGRES_USER: cunda
+      POSTGRES_PASSWORD: cunda_dev_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - cunda_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cunda -d cunda_menu"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  cunda_postgres_data:
