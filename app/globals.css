@@ -2,51 +2,76 @@
 
 :root {
   --ink:#182019;
-  --cream:#d8c8b4;
-  --paper:#f0e7dc;
+  --off-white:#FAF9F6;
+  --paper:#ffffff;
   --stone:#c5b29c;
-  --stone-dark:#74604e;
+  --stone-dark:#66594d;
   --sage:#7a6856;
   --line:#b7a38c;
   --rust:#8b593a;
-  --white:#fffaf2;
+  --white:#ffffff;
+  --wine:#7D0001;
 }
 * { box-sizing:border-box; }
 html { scroll-behavior:smooth; }
-body { margin:0; color:var(--ink); background:var(--cream); font-family:"DM Sans",Arial,sans-serif; }
+body { margin:0; color:var(--ink); background-color: var(--off-white); font-family:"DM Sans",Arial,sans-serif; }
 button,input,textarea,select { font:inherit; }
 button { cursor:pointer; }
 .menu-page { min-height:100vh; }
-.brand { padding:74px 24px 48px; text-align:center; background:var(--ink); color:var(--cream); }
-.brand-kicker,.eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.22em; color:#bca88f; }
+.brand { padding:42px 24px 30px; text-align:center; background:var(--off-white); }
+.brand-kicker { font-size:1em; font-weight:700; text-transform:uppercase; letter-spacing:.22em; color:black; }
+.eyebrow { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.22em; color:#bca88f; }
 .brand-mark,.footer-mark,.admin-logo,.login-logo { font-family:"Playfair Display",serif; font-style:italic; }
-.brand-mark { margin:8px 0 -8px; font-size:104px; line-height:1; letter-spacing:-.07em; }
-.brand p { margin:19px 0 0; font-size:11px; letter-spacing:.25em; text-transform:uppercase; color:#cdbda9; }
-.category-nav { position:sticky; top:0; z-index:5; display:flex; gap:28px; padding:17px max(24px,calc((100vw - 980px)/2)); overflow:auto; background:rgba(216,200,180,.96); border-bottom:1px solid var(--line); backdrop-filter:blur(10px); }
+.brand-logo-frame { width:min(330px,78vw); aspect-ratio:1.65; overflow:hidden; margin:3px auto -4px; }
+.brand-logo { display:block; width:100%; height:auto; transform:translateY(-33.8%); }
+.brand p { margin:4px 0 0; color:black; font:normal 600 12px Playfair Display, serif; letter-spacing:.12em; word-spacing:.2em; }
+.category-nav-shell { position:sticky; top:0; z-index:5; backdrop-filter:blur(10px); }
+.category-nav {
+  display:flex;
+  gap:18px;
+  padding:17px max(24px,calc((100vw - 980px)/2));
+  overflow:auto;
+  -webkit-mask-image:linear-gradient(to right,transparent 0 4vw,#000 8vw,#000 92vw,transparent 96vw 100%);
+  mask-image:linear-gradient(to right,transparent 0 4vw,#000 8vw,#000 92vw,transparent 96vw 100%);
+}
 .category-nav {
   -ms-overflow-style:none;
   scrollbar-width:none;
 }
+.category-nav-shell::before,
+.category-nav-shell::after {
+  content:"";
+  position:absolute;
+  left:50%;
+  width:92vw;
+  height:1px;
+  background:#66594d30;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+.category-nav-shell::before { top:0; }
+.category-nav-shell::after { bottom:0; }
 .category-nav::-webkit-scrollbar { display:none; }
 .category-nav a { flex:none; color:var(--ink); text-decoration:none; font-size:11px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
+.category-nav a:not(:last-child)::after { content:"◆"; display:inline-block; margin-left:18px; color:var(--wine); font-size:.8em; vertical-align:top; }
 .menu-content { width:min(900px,calc(100% - 40px)); margin:0 auto; padding:75px 0; }
-.menu-section { scroll-margin-top:75px; display:grid; grid-template-columns:240px 1fr; gap:55px; padding:55px 0; border-top:1px solid var(--line); }
+.menu-section { scroll-margin-top:75px; display:grid; grid-template-columns:240px 1fr; gap:55px; padding:55px 0; border-top:1px solid #7d0001; }
 .menu-section:first-child { border-top:0; padding-top:0; }
-.section-heading span { display:block; margin-bottom:12px; color:var(--rust); font-size:11px; font-weight:700; letter-spacing:.2em; }
-.section-heading h2 { margin:0; font:600 37px/1.08 "Playfair Display",serif; }
+.section-heading span { display:block; margin-bottom:12px; color:var(--stone-dark); font-size:11px; font-weight:700; letter-spacing:.2em; }
+.section-heading h2 { margin:0; color:var(--wine); font:600 37px/1.08 "Playfair Display",serif; }
 .menu-product { margin-bottom:28px; transition:opacity .2s; }
 .product-line { display:flex; align-items:baseline; gap:10px; }
 .product-line h3 { margin:0; font-size:14px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
 .product-line .dots { flex:1; border-bottom:1px dotted #9b8771; }
 .product-line strong { font-size:14px; white-space:nowrap; }
-.menu-product p { max-width:520px; margin:6px 0 0; color:#66594d; font:italic 13px/1.55 "Playfair Display",serif; }
+.menu-product p { max-width:520px; margin:6px 0 0; color:var(--stone-dark); font:italic 13px/1.55 "Playfair Display",serif; }
 .menu-product.sold-out { opacity:.48; }
 .unavailable-label { display:inline-block; margin-top:7px; color:var(--rust); font-size:10px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
 footer { padding:55px 20px; text-align:center; color:#cdbba5; background:var(--ink); }
 .footer-mark { font-size:46px; }
 footer p { font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
 
-.login-page { min-height:100vh; display:grid; place-items:center; padding:24px; background:var(--ink); }
+.login-page { min-height:100vh; display:grid; place-items:center; padding:24px; background:#fff; }
 .login-card { width:min(460px,100%); padding:48px; background:var(--paper); border:1px solid #6e5c49; border-radius:3px; box-shadow:0 30px 80px #0008; }
 .login-logo { font-size:45px; margin:25px 0 22px; }
 .login-card h1,.modal h2 { margin:6px 0 8px; font:600 32px "Playfair Display",serif; }
@@ -60,7 +85,7 @@ input:focus,textarea:focus,select:focus { border-color:var(--sage); box-shadow:0
 .secondary-button { background:var(--sage); }
 .form-error { margin:0; color:var(--rust); font-size:12px; }
 
-.admin-page { min-height:100vh; display:grid; grid-template-columns:220px 1fr; background:#d8c8b4; }
+.admin-page { min-height:100vh; display:grid; grid-template-columns:220px 1fr; background:#fff; }
 .sidebar { position:sticky; top:0; height:100vh; display:flex; flex-direction:column; padding:34px 26px; color:#eadfce; background:var(--ink); }
 .admin-logo { color:var(--white); text-decoration:none; font-size:39px; }
 .sidebar nav { display:grid; gap:7px; margin-top:55px; }
@@ -164,9 +189,9 @@ input:focus,textarea:focus,select:focus { border-color:var(--sage); box-shadow:0
   .row-actions { grid-column:1/-1; padding-left:19px; }
 }
 @media (max-width:560px) {
-  .brand { padding-top:58px; }
-  .brand-mark { font-size:82px; }
-  .menu-content { width:calc(100% - 32px); padding-top:45px; }
+  .brand { padding-top:5vh; padding-bottom:5vh; }
+  .brand-logo-frame { width:min(270px,76vw); }
+  .menu-content { width:calc(100% - 32px); padding-top:5vh; }
   .menu-section { padding:44px 0; }
   .category-nav { padding-left:16px; }
   .sidebar nav a:first-child,.sidebar nav a:nth-child(2),.sidebar .text-button { display:none; }

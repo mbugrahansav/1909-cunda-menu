@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getCategories } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -9,13 +10,23 @@ export default async function MenuPage() {
   return (
     <main className="menu-page">
       <header className="brand">
-        <span className="brand-kicker">Ayvalık · Cunda</span>
-        <div className="brand-mark">1909</div>
-        <p>Kokteyl · Mutfak · Müzik</p>
+        <div className="brand-logo-frame">
+          <Image
+            className="brand-logo"
+            src="/1909-cunda-logo.png"
+            alt="1909 Cunda"
+            width={2344}
+            height={4169}
+            priority
+          />
+        </div>
+        <p>KOKTEYL <span style={{fontSize: "14px"}}>ve</span> YEMEK</p>
       </header>
-      <nav className="category-nav" aria-label="Menü kategorileri">
-        {categories.map((category) => <a key={category.id} href={`#kategori-${category.id}`}>{category.name}</a>)}
-      </nav>
+      <div className="category-nav-shell">
+        <nav className="category-nav" aria-label="Menü kategorileri">
+          {categories.map((category) => <a key={category.id} href={`#kategori-${category.id}`}>{category.name}</a>)}
+        </nav>
+      </div>
       <div className="menu-content">
         {categories.map((category, index) => (
           <section className="menu-section" id={`kategori-${category.id}`} key={category.id}>
