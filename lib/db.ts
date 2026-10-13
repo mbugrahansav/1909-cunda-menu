@@ -1,7 +1,7 @@
 import { Pool, type PoolClient } from "pg";
 import fs from "node:fs/promises";
 import path from "node:path";
-import type { Category, Product } from "./types";
+import type { AppearanceSettings, Category, Product } from "./types";
 
 declare global {
   // eslint-disable-next-line no-var
@@ -66,6 +66,8 @@ async function initializeDatabase() {
         category_id INTEGER NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
         name TEXT NOT NULL,
         description TEXT NOT NULL DEFAULT '',
+        calories INTEGER CHECK(calories IS NULL OR calories >= 0),
+        allergens TEXT NOT NULL DEFAULT '',
         price INTEGER NOT NULL CHECK(price >= 0),
         is_visible BOOLEAN NOT NULL DEFAULT TRUE,
         is_available BOOLEAN NOT NULL DEFAULT TRUE,
@@ -73,6 +75,24 @@ async function initializeDatabase() {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       );
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS calories INTEGER CHECK(calories IS NULL OR calories >= 0);
+      ALTER TABLE products ADD COLUMN IF NOT EXISTS allergens TEXT NOT NULL DEFAULT '';
+      CREATE TABLE IF NOT EXISTS appearance_settings (
+        id SMALLINT PRIMARY KEY CHECK (id = 1),
+        header_background VARCHAR(7) NOT NULL DEFAULT '#FAF9F6',
+        nav_background VARCHAR(7) NOT NULL DEFAULT '#E0DBC5',
+        menu_background VARCHAR(7) NOT NULL DEFAULT '#FAF9F6',
+        footer_background VARCHAR(7) NOT NULL DEFAULT '#182019',
+        category_text_color VARCHAR(7) NOT NULL DEFAULT '#182019',
+        section_heading_color VARCHAR(7) NOT NULL DEFAULT '#7D0001',
+        footer_text_color VARCHAR(7) NOT NULL DEFAULT '#CDBBA5',
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      );
+      ALTER TABLE appearance_settings ADD COLUMN IF NOT EXISTS footer_background VARCHAR(7) NOT NULL DEFAULT '#182019';
+      ALTER TABLE appearance_settings ADD COLUMN IF NOT EXISTS category_text_color VARCHAR(7) NOT NULL DEFAULT '#182019';
+      ALTER TABLE appearance_settings ADD COLUMN IF NOT EXISTS section_heading_color VARCHAR(7) NOT NULL DEFAULT '#7D0001';
+      ALTER TABLE appearance_settings ADD COLUMN IF NOT EXISTS footer_text_color VARCHAR(7) NOT NULL DEFAULT '#CDBBA5';
+      INSERT INTO appearance_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
       CREATE INDEX IF NOT EXISTS products_category_order_idx ON products(category_id, sort_order);
     `);
     await seedFromLegacyMenu(client);
@@ -96,27 +116,27 @@ export async function getCategories(includeHidden = false): Promise<Category[]> 
   await ready();
   const [categoryResult, productResult] = await Promise.all([
     getPool().query<{ id: number; name: string; sort_order: number }>("SELECT id, name, sort_order FROM categories ORDER BY sort_order, id"),
-    getPool().query<ProductRow>(`SELECT id, category_id, name, description, price, is_visible, is_available, sort_order
+    getPool().query<ProductRow>(`SELECT id, category_id, name, description, calories, allergens, price, is_visible, is_available, sort_order
       FROM products ${includeHidden ? "" : "WHERE is_visible = TRUE"} ORDER BY sort_order, id`),
   ]);
   return categoryResult.rows.map((category) => ({
     id: category.id, name: category.name, sortOrder: category.sort_order,
     products: productResult.rows.filter((row) => row.category_id === category.id).map((row) => ({
-      id: row.id, categoryId: row.category_id, name: row.name, description: row.description,
+      id: row.id, categoryId: row.category_id, name: row.name, description: row.description, calories: row.calories, allergens: row.allergens,
       price: row.price, isVisible: row.is_visible, isAvailable: row.is_available, sortOrder: row.sort_order,
     })),
   })).filter((category) => includeHidden || category.products.length > 0);
 }
 
-export async function createProduct(data: { categoryId: number; name: string; description: string; price: number }) {
+export async function createProduct(data: { categoryId: number; name: string; description: string; calories: number | null; allergens: string; price: number }) {
   await ready();
-  await getPool().query(`INSERT INTO products (category_id, name, description, price, sort_order)
-    SELECT $1, $2, $3, $4, COALESCE(MAX(sort_order), -1) + 1 FROM products WHERE category_id = $1`, [data.categoryId, data.name, data.description, data.price]);
+  await getPool().query(`INSERT INTO products (category_id, name, description, calories, allergens, price, sort_order)
+    SELECT $1, $2, $3, $4, $5, $6, COALESCE(MAX(sort_order), -1) + 1 FROM products WHERE category_id = $1`, [data.categoryId, data.name, data.description, data.calories, data.allergens, data.price]);
 }
 
-export async function updateProduct(id: number, data: { name: string; description: string; price: number; categoryId: number }) {
+export async function updateProduct(id: number, data: { name: string; description: string; calories: number | null; allergens: string; price: number; categoryId: number }) {
   await ready();
-  await getPool().query("UPDATE products SET name=$1, description=$2, price=$3, category_id=$4, updated_at=NOW() WHERE id=$5", [data.name, data.description, data.price, data.categoryId, id]);
+  await getPool().query("UPDATE products SET name=$1, description=$2, calories=$3, allergens=$4, price=$5, category_id=$6, updated_at=NOW() WHERE id=$7", [data.name, data.description, data.calories, data.allergens, data.price, data.categoryId, id]);
 }
 
 export async function toggleProduct(id: number, field: "is_visible" | "is_available") {
@@ -131,3 +151,71 @@ export async function createCategory(name: string) {
   await getPool().query("INSERT INTO categories (name, sort_order) SELECT $1, COALESCE(MAX(sort_order), -1) + 1 FROM categories", [name]);
 }
 export async function deleteCategory(id: number) { await ready(); await getPool().query("DELETE FROM categories WHERE id = $1", [id]); }
+export async function updateCategory(id: number, name: string) {
+  await ready();
+  await getPool().query("UPDATE categories SET name = $1 WHERE id = $2", [name, id]);
+}
+export async function reorderCategories(ids: number[]) {
+  await ready();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    for (const [sortOrder, id] of ids.entries()) {
+      await client.query("UPDATE categories SET sort_order = $1 WHERE id = $2", [sortOrder, id]);
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
+
+export async function reorderProducts(categoryId: number, ids: number[]) {
+  await ready();
+  const client = await getPool().connect();
+  try {
+    await client.query("BEGIN");
+    const current = await client.query<{ id: number }>("SELECT id FROM products WHERE category_id = $1 FOR UPDATE", [categoryId]);
+    const currentIds = new Set(current.rows.map((row) => row.id));
+    if (currentIds.size !== ids.length || ids.some((id) => !currentIds.has(id))) throw new Error("Ürün sıralaması kategoriyle eşleşmiyor.");
+    for (const [sortOrder, id] of ids.entries()) {
+      await client.query("UPDATE products SET sort_order = $1, updated_at = NOW() WHERE id = $2 AND category_id = $3", [sortOrder, id, categoryId]);
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally { client.release(); }
+}
+
+export async function getAppearanceSettings(): Promise<AppearanceSettings> {
+  await ready();
+  const result = await getPool().query<{
+    header_background: string;
+    nav_background: string;
+    menu_background: string;
+    footer_background: string;
+    category_text_color: string;
+    section_heading_color: string;
+    footer_text_color: string;
+  }>("SELECT header_background, nav_background, menu_background, footer_background, category_text_color, section_heading_color, footer_text_color FROM appearance_settings WHERE id = 1");
+  const row = result.rows[0];
+  return {
+    headerBackground: row.header_background,
+    navBackground: row.nav_background,
+    menuBackground: row.menu_background,
+    footerBackground: row.footer_background,
+    categoryTextColor: row.category_text_color,
+    sectionHeadingColor: row.section_heading_color,
+    footerTextColor: row.footer_text_color,
+  };
+}
+
+export async function updateAppearanceSettings(settings: AppearanceSettings) {
+  await ready();
+  await getPool().query(`UPDATE appearance_settings
+    SET header_background = $1, nav_background = $2, menu_background = $3,
+      footer_background = $4, category_text_color = $5, section_heading_color = $6,
+      footer_text_color = $7, updated_at = NOW()
+    WHERE id = 1`, [settings.headerBackground, settings.navBackground, settings.menuBackground, settings.footerBackground, settings.categoryTextColor, settings.sectionHeadingColor, settings.footerTextColor]);
+}

@@ -1,14 +1,24 @@
 import Image from "next/image";
-import { getCategories } from "@/lib/db";
+import type { CSSProperties } from "react";
+import { getAppearanceSettings, getCategories } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
 const money = new Intl.NumberFormat("tr-TR");
 
 export default async function MenuPage() {
-  const categories = await getCategories();
+  const [categories, appearance] = await Promise.all([getCategories(), getAppearanceSettings()]);
+  const menuStyle = {
+    "--menu-header-bg": appearance.headerBackground,
+    "--menu-nav-bg": appearance.navBackground,
+    "--menu-content-bg": appearance.menuBackground,
+    "--menu-footer-bg": appearance.footerBackground,
+    "--menu-category-text": appearance.categoryTextColor,
+    "--menu-section-heading": appearance.sectionHeadingColor,
+    "--menu-footer-text": appearance.footerTextColor,
+  } as CSSProperties;
   return (
-    <main className="menu-page">
+    <main className="menu-page" style={menuStyle}>
       <header className="brand">
         <div className="brand-logo-frame">
           <Image
@@ -36,6 +46,10 @@ export default async function MenuPage() {
                 <article className={`menu-product ${!product.isAvailable ? "sold-out" : ""}`} key={product.id}>
                   <div className="product-line"><h3>{product.name}</h3><span className="dots"/><strong>{money.format(product.price)} ₺</strong></div>
                   {product.description && <p>{product.description}</p>}
+                  {(product.calories !== null || product.allergens) && <div className="product-details">
+                    {product.calories !== null && <span>{product.calories} kcal</span>}
+                    {product.allergens && <span><b>Alerjenler:</b> {product.allergens}</span>}
+                  </div>}
                   {!product.isAvailable && <span className="unavailable-label">Şu an mevcut değil</span>}
                 </article>
               ))}
